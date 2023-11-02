@@ -8,11 +8,15 @@
 #      http://www.linux-usb.org/gadget/file_storage.html
 
 #  `mount | grep configfs` to get the mount point/path for the virtual config filesystem
+
+# swy: usually mounted at /config
+set configfs=`mount -t configfs | head -n1 | cut -d' ' -f 3`
+
 mkdir /config/usb_gadget/swy
 pushd /config/usb_gadget/swy
 
-echo 0x1d6b > idVendor
-echo 0x0104 > idProduct
+echo 0x1337 > idVendor
+echo 0x1337 > idProduct
 
 mkdir strings/0x409
 echo "1337"     > strings/0x409/serialnumber
@@ -38,6 +42,8 @@ ln -s functions/mass_storage.0 configs/swyconfig.1
 # swy: enable/attach the gadget to the physical USB controller
 getprop sys.usb.controller > UDC
 setprop sys.usb.state mass_storage
+
+read "[i] press any key to exit the mass storage gadget mode"
 
 # swy: dettach the gadget
 echo "" > UDC
