@@ -1,30 +1,6 @@
 #!/bin/sh
 
 # https://github.com/SoulForeverInPeace/Boot-PC/blob/12924535c2a469a930cd2fbb4763b1578a022727/app/src/main/kotlin/com/my/mdmd/MainscreenFragment.kt#L176
-# ls /config/usb_gadget/g1/functions/
-# > mass_storage.0
-
-setprop sys.usb.config cdrom
-getprop sys.usb.config
-setprop sys.usb.configfs 1
-
-cd /config/usb_gadget/g1
-getprop sys.usb.config > configs/b.1/strings/0x409/configuration
-for f in configs/b.1/f*; do rm $f; done
-echo 0x1d6b > idVendor
-echo 0x0104 > idProduct
-ln -s /config/usb_gadget/g1/functions/mass_storage.0  /config/usb_gadget/g1/configs/b.1/f1
-echo "" > /sys/class/android_usb/android1/f_mass_storage/lun0/file
-echo  1 > /sys/class/android_usb/android0/f_mass_storage/lun0/cdrom
-echo  1 > /sys/class/android_usb/android0/f_mass_storage/lun0/ro
-echo -n "/sdcard/Download/netboot.xyz.iso" > configs/b.1/f1/lun.0/file
-getprop sys.usb.controller > /config/usb_gadget/g1/UDC
-setprop sys.usb.state cdrom
-
-
-echo "" > /config/usb_gadget/g1/UDC
-
-
 
 # ---
 # swy: https://www.kernel.org/doc/html/latest/usb/gadget_configfs.html
