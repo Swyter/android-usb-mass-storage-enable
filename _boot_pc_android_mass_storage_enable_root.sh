@@ -47,11 +47,11 @@ read "[i] press any key to exit the mass storage gadget mode"
 # swy: dettach the gadget
 echo "" > UDC
 
-rm    configs/swyconfig.1/mass_storage.0
-rmdir configs/swyconfig.1/strings/0x409
-rmdir configs/swyconfig.1/
+rm    configs/swyconfig.1/mass_storage.0 #swy: remove the symbolic link to the function
+rmdir configs/swyconfig.1/strings/0x409  #swy: deallocate the configuration strings
+rmdir configs/swyconfig.1/               #swy: now we can remove the empty config
 
-rmdir functions/mass_storage.0
+rmdir functions/mass_storage.0           #swy: remove the now-unlinked function
 
-rmdir strings/0x409
-cd .. && rmdir swy
+rmdir strings/0x409                      #swy: deallocate the gadget strings
+cd .. && rmdir swy                       #swy: remove the now-empty gadget
