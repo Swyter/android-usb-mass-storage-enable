@@ -10,10 +10,10 @@
 #  `mount | grep configfs` to get the mount point/path for the virtual config filesystem
 
 # swy: usually mounted at /config
-set configfs=`mount -t configfs | head -n1 | cut -d' ' -f 3`
+CONFIGFS=`mount -t configfs | head -n1 | cut -d' ' -f 3`
 
-mkdir /config/usb_gadget/swy
-pushd /config/usb_gadget/swy
+mkdir $CONFIGFS/usb_gadget/swy
+pushd $CONFIGFS/usb_gadget/swy
 
 echo 0x1337 > idVendor
 echo 0x1337 > idProduct
@@ -28,15 +28,14 @@ mkdir configs/swyconfig.1/strings/0x409
 echo "probando mass_storage" > configs/swyconfig.1/strings/0x409/configuration
 
 mkdir functions/mass_storage.0
-functions/mass_storage.0/lun.0/file
+#functions/mass_storage.0/lun.0/file
 
 # swy: the mass storage driver is aware of the underlying data, so only a well-formatted ISO will work in cdrom mode, and a partitioned hard drive image will show up otherwise
 #      if the drive appears blank/0 bytes there's your problem
+echo "y"                                   > functions/mass_storage.0/lun.0/ro
+echo "y"                                   > functions/mass_storage.0/lun.0/removable
+echo "y"                                   > functions/mass_storage.0/lun.0/cdrom
 echo "/sdcard/Download/netboot.xyz.iso"    > functions/mass_storage.0/lun.0/file
-echo  y                                    > functions/mass_storage.0/lun.0/cdrom
-echo  y                                    > functions/mass_storage.0/lun.0/ro
-echo  y                                    > functions/mass_storage.0/lun.0/removable
-
 ln -s functions/mass_storage.0 configs/swyconfig.1
 
 # swy: enable/attach the gadget to the physical USB controller
@@ -47,3 +46,12 @@ read "[i] press any key to exit the mass storage gadget mode"
 
 # swy: dettach the gadget
 echo "" > UDC
+
+rm    configs/swyconfig.1/mass_storage.0
+rmdir configs/swyconfig.1/strings/0x409
+rmdir configs/swyconfig.1/
+
+rmdir functions/mass_storage.0
+
+rmdir strings/0x409
+cd .. && rmdir swy
