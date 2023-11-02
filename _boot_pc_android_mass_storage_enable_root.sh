@@ -12,33 +12,33 @@
 # swy: usually mounted at /config
 CONFIGFS=`mount -t configfs | head -n1 | cut -d' ' -f 3`
 
-mkdir $CONFIGFS/usb_gadget/swy
-pushd $CONFIGFS/usb_gadget/swy
+mkdir $CONFIGFS/usb_gadget/swy # swy: create a new gadget
+pushd $CONFIGFS/usb_gadget/swy # swy: enter the folder
 
-echo 0x1337 > idVendor
-echo 0x1337 > idProduct
+echo 0x1337 > idVendor  # swy: set the USB manufacturer code
+echo 0x1337 > idProduct # swy: set the USB device code
 
-mkdir strings/0x409
+mkdir strings/0x409 # swy: create a folder to store the text descriptors that will be shown to the host; fill it out
 echo "1337"     > strings/0x409/serialnumber
 echo "Mariposa" > strings/0x409/manufacturer
 echo "Cosa"     > strings/0x409/product
 
-mkdir configs/swyconfig.1
+mkdir configs/swyconfig.1 # swy: create an empty configuration; the name doesn't matter
 mkdir configs/swyconfig.1/strings/0x409
 echo "probando mass_storage" > configs/swyconfig.1/strings/0x409/configuration
 
-mkdir functions/mass_storage.0
-#functions/mass_storage.0/lun.0/file
+mkdir functions/mass_storage.0 # swy: create a gadget function of type 'mass_storage', only the part after the . is customizable
 
-# swy: the mass storage driver is aware of the underlying data, so only a well-formatted ISO will work in cdrom mode, and a partitioned hard drive image will show up otherwise
-#      if the drive appears blank/0 bytes there's your problem
+# swy: the mass storage driver is aware of the underlying data, so only a well-formatted ISO will work in cdrom mode,
+#      and only a partitioned hard drive image will show up otherwise.
+#      if the drive appears blank/0 bytes there's your problem.
 echo "y"                                   > functions/mass_storage.0/lun.0/ro
 echo "y"                                   > functions/mass_storage.0/lun.0/removable
 echo "y"                                   > functions/mass_storage.0/lun.0/cdrom
-echo "/sdcard/Download/netboot.xyz.iso"    > functions/mass_storage.0/lun.0/file
-ln -s functions/mass_storage.0 configs/swyconfig.1
+echo "/sdcard/Download/netboot.xyz.iso"    > functions/mass_storage.0/lun.0/file # swy: make sure we assign the actual path last, or setting ro/cdrom won't work until we empty this
+ln -s functions/mass_storage.0 configs/swyconfig.1 # swy: add a symbolic link to put our function into a premade config folder
 
-# swy: enable/attach the gadget to the physical USB controller
+# swy: enable/attach the gadget to the physical USB controller; mark this gadget as active
 getprop sys.usb.controller > UDC
 setprop sys.usb.state mass_storage
 
