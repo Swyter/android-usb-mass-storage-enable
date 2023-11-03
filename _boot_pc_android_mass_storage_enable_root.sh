@@ -6,6 +6,7 @@
 # swy: https://www.kernel.org/doc/html/latest/usb/gadget_configfs.html
 #      https://www.kernel.org/doc/html/latest/usb/mass-storage.html
 #      http://www.linux-usb.org/gadget/file_storage.html
+#      https://github.com/funshine/uvc-gadget-new/blob/master/doc/src/configfs.md
 
 #  `mount | grep configfs` to get the mount point/path for the virtual config filesystem
 
@@ -18,6 +19,10 @@ cd    $CONFIGFS/usb_gadget/swy # swy: enter the folder
 echo 0x1337 > idVendor  # swy: set the USB manufacturer code
 echo 0x1337 > idProduct # swy: set the USB device code
 
+#echo 0xEF > bDeviceClass    # swy: Multi-interface Function: 0xEF
+#echo    2 > bDeviceSubClass # swy: USB Common Sub Class 2
+#echo    1 > bDeviceProtocol # swy: USB IAD Protocol 1    
+            
 mkdir strings/0x409 # swy: create a folder to store the text descriptors that will be shown to the host; fill it out
 echo "1337"     > strings/0x409/serialnumber
 echo "Mariposa" > strings/0x409/manufacturer
@@ -39,12 +44,37 @@ echo "/sdcard/Download/netboot.xyz.iso"    > functions/mass_storage.0/lun.0/file
 
 ln -s functions/mass_storage.0 configs/swyconfig.1 # swy: add a symbolic link to put our function into a premade config folder
 
+# --
+
+mkdir configs/swyconfig.2 # swy: create an empty configuration; the name doesn't matter
+mkdir configs/swyconfig.2/strings/0x409
+echo "probando rndis" > configs/swyconfig.2/strings/0x409/configuration
+
+#echo 0x1       > os_desc/b_vendor_code 
+#echo "MSFT100" > os_desc/qw_sign
+
+# swy: add a RNDIS Windows USB tethering function, here we seem to need the suffix
+mkdir functions/gsi.rndis
+ln -s functions/gsi.rndis configs/swyconfig.2 # swy: add a symbolic link to put our function into a premade config folder
+
+ip address add 192.168.90.1/24 dev rndis0
+ip link set rndis0 up
+
+# killall dnsmasq && dnsmasq --no-daemon --interface=rndis0 --listen-address=192.168.90.1 --dhcp-range=192.168.90.5,192.168.90.254 # --conf-file=/data/tmp/dnsmasq.conf
+
+# --
+
 # swy: enable/attach the gadget to the physical USB controller; mark this gadget as active
 getprop sys.usb.controller > UDC
 setprop sys.usb.state mass_storage
 
+
 echo "[i] press any key to exit the mass storage gadget mode..." && read
 echo 
+
+
+ip link set rndis0 down
+ip address delete 192.168.90.1/32 dev rndis0
 
 # swy: dettach the gadget
 echo "" > UDC
@@ -54,6 +84,12 @@ rmdir configs/swyconfig.1/strings/0x409  #swy: deallocate the configuration stri
 rmdir configs/swyconfig.1/               #swy: now we can remove the empty config
 
 rmdir functions/mass_storage.0           #swy: remove the now-unlinked function
+
+rm    configs/swyconfig.2/gsi.rndis      #swy: remove the symbolic link to the function
+rmdir configs/swyconfig.2/strings/0x409  #swy: deallocate the configuration strings
+rmdir configs/swyconfig.2/               #swy: now we can remove the empty config
+
+rmdir functions/gsi.rndis                #swy: remove the now-unlinked function
 
 rmdir strings/0x409                      #swy: deallocate the gadget strings
 cd .. && rmdir swy                       #swy: remove the now-empty gadget
