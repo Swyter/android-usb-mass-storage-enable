@@ -71,13 +71,14 @@ ip address add 10.20.30.1/24 dev rndis0
 ip link set rndis0 up
 
 # swy: --port=0 disables the DNS functionality, we only want it to work as a DHCP server
-killall dnsmasq
-dnsmasq --no-daemon --port=0 --interface=rndis0 --listen-address=10.20.30.1 --dhcp-range=rndis,10.20.30.5,10.20.30.254,12h # --conf-file=/data/tmp/dnsmasq.conf
+#      --enable-tftp --tftp-root="/sdcard/Download" (seemingly no tftp support in the bundled version ¿?)
+killall -9 dnsmasq
+dnsmasq --no-daemon --no-hosts --no-resolv --server=8.8.8.8 --interface=rndis0 --dhcp-range=tether,10.20.30.2,10.20.30.2,2m # --conf-file=/data/tmp/dnsmasq.conf
 
 echo "[i] press any key to exit the mass storage gadget mode..." && read
 echo 
 
-killall dnsmasq
+killall -9 dnsmasq
 ip link set rndis0 down
 ip address delete 10.20.30.1/32 dev rndis0
 
