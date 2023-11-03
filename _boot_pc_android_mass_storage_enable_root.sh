@@ -47,11 +47,6 @@ echo "MSFT100" > os_desc/qw_sign
 mkdir functions/gsi.rndis
 ln -s functions/gsi.rndis configs/swyconfig.1 # swy: add a symbolic link to put our function into a premade config folder
 
-ip address add 192.168.90.1/24 dev rndis0
-ip link set rndis0 up
-
-# swy: FIXME: DHCP doesn't work, yet: killall dnsmasq && dnsmasq --no-daemon --interface=rndis0 --listen-address=192.168.90.1 --dhcp-range=192.168.90.5,192.168.90.254 # --conf-file=/data/tmp/dnsmasq.conf
-
 # --
 
 mkdir functions/mass_storage.0 # swy: create a gadget function of type 'mass_storage', only the part after the . is customizable
@@ -72,13 +67,19 @@ ln -s functions/mass_storage.0 configs/swyconfig.1 # swy: add a symbolic link to
 getprop sys.usb.controller > UDC
 setprop sys.usb.state mass_storage
 
+ip address add 10.20.30.1/24 dev rndis0
+ip link set rndis0 up
+
+# swy: --port=0 disables the DNS functionality, we only want it to work as a DHCP server
+killall dnsmasq
+dnsmasq --no-daemon --port=0 --interface=rndis0 --listen-address=10.20.30.1 --dhcp-range=rndis,10.20.30.5,10.20.30.254,12h # --conf-file=/data/tmp/dnsmasq.conf
 
 echo "[i] press any key to exit the mass storage gadget mode..." && read
 echo 
 
 killall dnsmasq
 ip link set rndis0 down
-ip address delete 192.168.90.1/32 dev rndis0
+ip address delete 10.20.30.1/32 dev rndis0
 
 # swy: detach the gadget from the physical USB port
 echo "" > UDC
