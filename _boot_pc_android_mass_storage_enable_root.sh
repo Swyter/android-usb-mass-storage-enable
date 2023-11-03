@@ -67,7 +67,7 @@ echo "/sdcard/Download/netboot.xyz.iso"    > functions/mass_storage.0/lun.0/file
 ln -s functions/mass_storage.0 configs/swyconfig.1 # swy: add a symbolic link to put our function into a premade config folder
 
 
-# swy: enable/attach the gadget to the physical USB controller; mark this gadget as active
+# swy: enable/attach the gadget to the physical USB device controller; mark this gadget as active
 # swy: note: `getprop sys.usb.controller` == `ls /sys/class/udc`
 getprop sys.usb.controller > UDC
 setprop sys.usb.state mass_storage
@@ -80,11 +80,11 @@ killall dnsmasq
 ip link set rndis0 down
 ip address delete 192.168.90.1/32 dev rndis0
 
-# swy: detach the gadget
+# swy: detach the gadget from the physical USB port
 echo "" > UDC
 
-rm    configs/swyconfig.1/mass_storage.0 #swy: remove the symbolic link to the function
-rm    configs/swyconfig.1/gsi.rndis      #swy: remove the symbolic link to the function
+rm    configs/swyconfig.1/mass_storage.0 #swy: remove the symbolic link to each function, times two
+rm    configs/swyconfig.1/gsi.rndis      #
 rmdir configs/swyconfig.1/strings/0x409  #swy: deallocate the configuration strings
 rmdir configs/swyconfig.1/               #swy: now we can remove the empty config
 
