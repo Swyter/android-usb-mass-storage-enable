@@ -1,8 +1,13 @@
 #!/bin/sh
 
-# https://github.com/SoulForeverInPeace/Boot-PC/blob/12924535c2a469a930cd2fbb4763b1578a022727/app/src/main/kotlin/com/my/mdmd/MainscreenFragment.kt#L176
+# turn the USB connection of your Android phone into a CD-ROM drive that mounts ISOs and provides tethering two-in-one,
+# useful for PXE booting laptops/desktops from the network without needing anything else. requires root privileges.
+# --
+# created by swyter <swyterzone+usbgadget@gmail.com> in 2023-11-02
+# licensed under the MIT license
 
-# ---
+# based on this: https://github.com/SoulForeverInPeace/Boot-PC/blob/12924535c/app/src/main/kotlin/com/my/mdmd/MainscreenFragment.kt#L176
+# --
 # swy: https://www.kernel.org/doc/html/latest/usb/gadget_configfs.html
 #      https://www.kernel.org/doc/html/latest/usb/mass-storage.html
 #      http://www.linux-usb.org/gadget/file_storage.html
@@ -45,7 +50,7 @@ ln -s functions/gsi.rndis configs/swyconfig.1 # swy: add a symbolic link to put 
 ip address add 192.168.90.1/24 dev rndis0
 ip link set rndis0 up
 
-# killall dnsmasq && dnsmasq --no-daemon --interface=rndis0 --listen-address=192.168.90.1 --dhcp-range=192.168.90.5,192.168.90.254 # --conf-file=/data/tmp/dnsmasq.conf
+# swy: FIXME: DHCP doesn't work, yet: killall dnsmasq && dnsmasq --no-daemon --interface=rndis0 --listen-address=192.168.90.1 --dhcp-range=192.168.90.5,192.168.90.254 # --conf-file=/data/tmp/dnsmasq.conf
 
 # --
 
