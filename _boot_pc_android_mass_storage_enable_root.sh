@@ -31,7 +31,23 @@ echo "Cosa"     > strings/0x409/product
 
 mkdir configs/swyconfig.1 # swy: create an empty configuration; the name doesn't matter
 mkdir configs/swyconfig.1/strings/0x409
-echo "probando mass_storage" > configs/swyconfig.1/strings/0x409/configuration
+echo "first rndis, then mass_storage to work on win32" > configs/swyconfig.1/strings/0x409/configuration
+
+# --
+
+echo 0x1       > os_desc/b_vendor_code 
+echo "MSFT100" > os_desc/qw_sign
+
+# swy: add a RNDIS Windows USB tethering function, here we seem to need the suffix
+mkdir functions/gsi.rndis
+ln -s functions/gsi.rndis configs/swyconfig.1 # swy: add a symbolic link to put our function into a premade config folder
+
+ip address add 192.168.90.1/24 dev rndis0
+ip link set rndis0 up
+
+# killall dnsmasq && dnsmasq --no-daemon --interface=rndis0 --listen-address=192.168.90.1 --dhcp-range=192.168.90.5,192.168.90.254 # --conf-file=/data/tmp/dnsmasq.conf
+
+# --
 
 mkdir functions/mass_storage.0 # swy: create a gadget function of type 'mass_storage', only the part after the . is customizable
 
@@ -45,26 +61,9 @@ echo "/sdcard/Download/netboot.xyz.iso"    > functions/mass_storage.0/lun.0/file
 
 ln -s functions/mass_storage.0 configs/swyconfig.1 # swy: add a symbolic link to put our function into a premade config folder
 
-# --
-
-mkdir configs/swyconfig.2 # swy: create an empty configuration; the name doesn't matter
-mkdir configs/swyconfig.2/strings/0x409
-echo "probando rndis" > configs/swyconfig.2/strings/0x409/configuration
-echo 0x1       > os_desc/b_vendor_code 
-echo "MSFT100" > os_desc/qw_sign
-
-# swy: add a RNDIS Windows USB tethering function, here we seem to need the suffix
-mkdir functions/gsi.rndis
-ln -s functions/gsi.rndis configs/swyconfig.2 # swy: add a symbolic link to put our function into a premade config folder
-
-ip address add 192.168.90.1/24 dev rndis0
-ip link set rndis0 up
-
-# killall dnsmasq && dnsmasq --no-daemon --interface=rndis0 --listen-address=192.168.90.1 --dhcp-range=192.168.90.5,192.168.90.254 # --conf-file=/data/tmp/dnsmasq.conf
-
-# --
 
 # swy: enable/attach the gadget to the physical USB controller; mark this gadget as active
+# swy: note: `getprop sys.usb.controller` == `ls /sys/class/udc`
 getprop sys.usb.controller > UDC
 setprop sys.usb.state mass_storage
 
@@ -80,15 +79,11 @@ ip address delete 192.168.90.1/32 dev rndis0
 echo "" > UDC
 
 rm    configs/swyconfig.1/mass_storage.0 #swy: remove the symbolic link to the function
+rm    configs/swyconfig.1/gsi.rndis      #swy: remove the symbolic link to the function
 rmdir configs/swyconfig.1/strings/0x409  #swy: deallocate the configuration strings
 rmdir configs/swyconfig.1/               #swy: now we can remove the empty config
 
 rmdir functions/mass_storage.0           #swy: remove the now-unlinked function
-
-rm    configs/swyconfig.2/gsi.rndis      #swy: remove the symbolic link to the function
-rmdir configs/swyconfig.2/strings/0x409  #swy: deallocate the configuration strings
-rmdir configs/swyconfig.2/               #swy: now we can remove the empty config
-
 rmdir functions/gsi.rndis                #swy: remove the now-unlinked function
 
 rmdir strings/0x409                      #swy: deallocate the gadget strings
