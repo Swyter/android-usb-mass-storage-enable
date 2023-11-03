@@ -16,12 +16,13 @@ CONFIGFS=`mount -t configfs | head -n1 | cut -d' ' -f 3`
 mkdir $CONFIGFS/usb_gadget/swy # swy: create a new gadget
 cd    $CONFIGFS/usb_gadget/swy # swy: enter the folder
 
-echo 0x1337 > idVendor  # swy: set the USB manufacturer code
-echo 0x1337 > idProduct # swy: set the USB device code
+echo 0x1d6b > idVendor  # swy: set the USB manufacturer code
+echo 0x0104 > idProduct # swy: set the USB device code
+echo 0x0100 > bcdUSB    # swy: set the USB revision
 
-#echo 0xEF > bDeviceClass    # swy: Multi-interface Function: 0xEF
-#echo    2 > bDeviceSubClass # swy: USB Common Sub Class 2
-#echo    1 > bDeviceProtocol # swy: USB IAD Protocol 1    
+echo 0xEF > bDeviceClass    # swy: Multi-interface Function: 0xEF
+echo    2 > bDeviceSubClass # swy: USB Common Sub Class 2
+echo    1 > bDeviceProtocol # swy: USB IAD Protocol 1    
             
 mkdir strings/0x409 # swy: create a folder to store the text descriptors that will be shown to the host; fill it out
 echo "1337"     > strings/0x409/serialnumber
@@ -49,9 +50,8 @@ ln -s functions/mass_storage.0 configs/swyconfig.1 # swy: add a symbolic link to
 mkdir configs/swyconfig.2 # swy: create an empty configuration; the name doesn't matter
 mkdir configs/swyconfig.2/strings/0x409
 echo "probando rndis" > configs/swyconfig.2/strings/0x409/configuration
-
-#echo 0x1       > os_desc/b_vendor_code 
-#echo "MSFT100" > os_desc/qw_sign
+echo 0x1       > os_desc/b_vendor_code 
+echo "MSFT100" > os_desc/qw_sign
 
 # swy: add a RNDIS Windows USB tethering function, here we seem to need the suffix
 mkdir functions/gsi.rndis
@@ -72,11 +72,11 @@ setprop sys.usb.state mass_storage
 echo "[i] press any key to exit the mass storage gadget mode..." && read
 echo 
 
-
+killall dnsmasq
 ip link set rndis0 down
 ip address delete 192.168.90.1/32 dev rndis0
 
-# swy: dettach the gadget
+# swy: detach the gadget
 echo "" > UDC
 
 rm    configs/swyconfig.1/mass_storage.0 #swy: remove the symbolic link to the function
