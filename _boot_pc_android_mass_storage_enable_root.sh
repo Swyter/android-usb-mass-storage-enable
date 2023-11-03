@@ -62,21 +62,49 @@ echo "/sdcard/Download/netboot.xyz.iso"    > functions/mass_storage.0/lun.0/file
 ln -s functions/mass_storage.0 configs/swyconfig.1 # swy: add a symbolic link to put our function into a premade config folder
 
 
+# swy: detach the USB port from the original gadget 
+echo "" > ../g1/UDC
+
 # swy: enable/attach the gadget to the physical USB device controller; mark this gadget as active
 # swy: note: `getprop sys.usb.controller` == `ls /sys/class/udc`
 getprop sys.usb.controller > UDC
 setprop sys.usb.state mass_storage
 
+
 ip address add 10.20.30.1/24 dev rndis0
 ip link set rndis0 up
 
+# swy: https://github.com/luftreich/android-wired-tether/blob/725e79e9/native/tether/tetherStartStop.cpp#L154
+# swy: these don't seem to work well, networking is broken at both ends
+iptables -F
+iptables -F -t nat
+iptables -I FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
+iptables -I FORWARD -s 10.20.30.0/24 -j ACCEPT
+iptables -P FORWARD DROP
+iptables -t nat -I POSTROUTING -s 10.20.30.0/24 -j MASQUERADE
+
+# swy: these get added by Android, found while diff'ing
+iptables -A tetherctrl_FORWARD -j bw_global_alert
+iptables -A tetherctrl_FORWARD -i wlan0 -o rndis0 -m state --state RELATED,ESTABLISHED -g tetherctrl_counters
+iptables -A tetherctrl_FORWARD -i rndis0 -o wlan0 -m state --state INVALID -j DROP
+iptables -A tetherctrl_FORWARD -i rndis0 -o wlan0 -g tetherctrl_counters
+
 # swy: --port=0 disables the DNS functionality, we only want it to work as a DHCP server
 #      --enable-tftp --tftp-root="/sdcard/Download" (seemingly no tftp support in the bundled version ¿?)
+#      --conf-file=/data/tmp/dnsmasq.conf
 killall -9 dnsmasq
-dnsmasq --no-daemon --no-hosts --no-resolv --server=8.8.8.8 --interface=rndis0 --dhcp-range=tether,10.20.30.2,10.20.30.2,2m # --conf-file=/data/tmp/dnsmasq.conf
+dnsmasq --no-daemon --no-hosts --no-resolv --server=8.8.8.8 --interface=rndis0 --dhcp-range=tether,10.20.30.2,10.20.30.20,1h
 
 echo "[i] press any key to exit the mass storage gadget mode..." && read
 echo 
+
+# swy: tear down the tables
+iptables -F
+iptables -t nat -F
+iptables -X
+iptables -t nat -X
+iptables -P FORWARD ACCEPT
+
 
 killall -9 dnsmasq
 ip link set rndis0 down
