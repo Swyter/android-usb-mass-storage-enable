@@ -15,9 +15,8 @@
 
 #  `mount | grep configfs` to get the mount point/path for the virtual config filesystem
 
-
 SWY_MOUNT_FILE='/sdcard/Download/netboot.xyz.iso'
-SWY_TETHER=0
+SWY_TETHER=true
 
 # swy: usually mounted at /config
 CONFIGFS=`mount -t configfs | head -n1 | cut -d' ' -f 3`
@@ -43,7 +42,7 @@ mkdir configs/swyconfig.1/strings/0x409
 echo "first rndis, then mass_storage to work on win32" > configs/swyconfig.1/strings/0x409/configuration
 
 # --
-if [ $SWY_TETHER ]; then
+if [ $SWY_TETHER = true ]; then
   # swy: add a RNDIS Windows USB tethering function, here we seem to need the suffix
   mkdir      functions/gsi.rmnet
   mkdir      functions/gsi.dpl
@@ -63,10 +62,11 @@ mkdir functions/mass_storage.0 # swy: create a gadget function of type 'mass_sto
 #      if the drive appears blank/0 bytes there's your problem.
 echo "y"                                   > functions/mass_storage.0/lun.0/ro
 echo "y"                                   > functions/mass_storage.0/lun.0/removable
-case "$SWY_MOUNT_FILE" in
-*.iso) echo echo "y"                       > functions/mass_storage.0/lun.0/cdrom
-*    ) echo echo "n"                       > functions/mass_storage.0/lun.0/cdrom
-esac
+echo "y"                                   > functions/mass_storage.0/lun.0/cdrom
+#case "$SWY_MOUNT_FILE" in
+#*.iso) echo echo "y"                       > functions/mass_storage.0/lun.0/cdrom
+#*    ) echo echo "n"                       > functions/mass_storage.0/lun.0/cdrom
+#esac
 echo "$SWY_MOUNT_FILE"                     > functions/mass_storage.0/lun.0/file # swy: make sure we assign the actual path last, or setting ro/cdrom won't work until we empty this
 
 ln -s functions/mass_storage.0 configs/swyconfig.1 # swy: add a symbolic link to put our function into a premade config folder
@@ -81,7 +81,7 @@ getprop sys.usb.controller > UDC
 setprop sys.usb.state mass_storage
 
 # --
-if [ $SWY_TETHER ]; then
+if [ $SWY_TETHER = true ]; then
   ip address add 10.20.30.1/24 dev rndis0
   ip link set rndis0 up
 
@@ -112,7 +112,7 @@ echo "[i] press any key to exit the mass storage gadget mode..." && read
 echo 
 
 # --
-if [ $SWY_TETHER ]; then
+if [ $SWY_TETHER = true ]; then
   # swy: tear down the tables
   iptables -F
   iptables -t nat -F
@@ -129,18 +129,22 @@ fi
 
 # swy: detach the gadget from the physical USB port
 echo "" > UDC
-echo getprop sys.usb.controller > ../g1/UDC
-svc usb setfunctions ""
+setprop sys.usb.state ""
 svc usb resetUsbGadget
-svc usb resetUsbPort
+svc usb resetUsbPort # swy: https://android.stackexchange.com/a/236070
+svc usb setFunctions ""
 
 rm    configs/swyconfig.1/mass_storage.0 #swy: remove the symbolic link to each function, times two
-rm    configs/swyconfig.1/gsi.rndis      #
+if [ $SWY_TETHER = true ]; then
+  rm  configs/swyconfig.1/gsi.rmnet
+  rm  configs/swyconfig.1/gsi.dpl
+  rm  configs/swyconfig.1/gsi.rndis
+fi
 rmdir configs/swyconfig.1/strings/0x409  #swy: deallocate the configuration strings
 rmdir configs/swyconfig.1/               #swy: now we can remove the empty config
 
 rmdir functions/mass_storage.0           #swy: remove the now-unlinked function
-if [ $SWY_TETHER ]; then
+if [ $SWY_TETHER = true ]; then
   rmdir functions/gsi.rmnet              
   rmdir functions/gsi.dpl                
   rmdir functions/gsi.rndis              #swy: remove the now-unlinked function
