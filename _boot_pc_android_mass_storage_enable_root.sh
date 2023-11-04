@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/system/bin/env sh
 
 # turn the USB connection of your Android phone into a CD-ROM drive that mounts ISOs and provides tethering two-in-one,
 # useful for PXE booting laptops/desktops from the network without needing anything else. requires root privileges.
@@ -30,18 +30,15 @@ echo    2 > bDeviceSubClass # swy: USB Common Sub Class 2
 echo    1 > bDeviceProtocol # swy: USB IAD Protocol 1    
             
 mkdir strings/0x409 # swy: create a folder to store the text descriptors that will be shown to the host; fill it out
-echo "1337"     > strings/0x409/serialnumber
-echo "Mariposa" > strings/0x409/manufacturer
-echo "Cosa"     > strings/0x409/product
+echo "1337"       > strings/0x409/serialnumber
+echo "swyter"     > strings/0x409/manufacturer
+echo "[andropxe]" > strings/0x409/product
 
 mkdir configs/swyconfig.1 # swy: create an empty configuration; the name doesn't matter
 mkdir configs/swyconfig.1/strings/0x409
 echo "first rndis, then mass_storage to work on win32" > configs/swyconfig.1/strings/0x409/configuration
 
 # --
-
-echo 0x1       > os_desc/b_vendor_code 
-echo "MSFT100" > os_desc/qw_sign
 
 # swy: add a RNDIS Windows USB tethering function, here we seem to need the suffix
 mkdir functions/gsi.rndis
