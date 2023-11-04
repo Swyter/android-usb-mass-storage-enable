@@ -45,7 +45,13 @@ echo "first rndis, then mass_storage to work on win32" > configs/swyconfig.1/str
 # --
 if [ $SWY_TETHER ]; then
   # swy: add a RNDIS Windows USB tethering function, here we seem to need the suffix
-  mkdir functions/gsi.rndis
+  mkdir      functions/gsi.rmnet
+  mkdir      functions/gsi.dpl
+  mkdir      functions/gsi.rndis
+  echo "1" > functions/gsi.rndis/rndis_class_id
+
+  ln -s functions/gsi.rmnet configs/swyconfig.1
+  ln -s functions/gsi.dpl   configs/swyconfig.1
   ln -s functions/gsi.rndis configs/swyconfig.1 # swy: add a symbolic link to put our function into a premade config folder
 fi
 # --
@@ -123,6 +129,10 @@ fi
 
 # swy: detach the gadget from the physical USB port
 echo "" > UDC
+echo getprop sys.usb.controller > ../g1/UDC
+svc usb setfunctions ""
+svc usb resetUsbGadget
+svc usb resetUsbPort
 
 rm    configs/swyconfig.1/mass_storage.0 #swy: remove the symbolic link to each function, times two
 rm    configs/swyconfig.1/gsi.rndis      #
@@ -131,6 +141,8 @@ rmdir configs/swyconfig.1/               #swy: now we can remove the empty confi
 
 rmdir functions/mass_storage.0           #swy: remove the now-unlinked function
 if [ $SWY_TETHER ]; then
+  rmdir functions/gsi.rmnet              
+  rmdir functions/gsi.dpl                
   rmdir functions/gsi.rndis              #swy: remove the now-unlinked function
 fi
 
