@@ -12,11 +12,14 @@
 #      https://www.kernel.org/doc/html/latest/usb/mass-storage.html
 #      http://www.linux-usb.org/gadget/file_storage.html
 #      https://github.com/funshine/uvc-gadget-new/blob/master/doc/src/configfs.md
-
+#  `cat /proc/config.gz | gunzip | grep RNDIS` `cat /proc/config.gz | gunzip | grep CONFIG_USB_F_` to view which gadget functions are built into your running kernel
 #  `mount | grep configfs` to get the mount point/path for the virtual config filesystem
 
+# swy: configure your file here, if it's not a plain ISO (i.e. a disk image) change the `cdrom` thing below from 'y' to 'n':
 SWY_MOUNT_FILE='/sdcard/Download/netboot.xyz.iso'
-SWY_TETHER=true
+SWY_TETHER=false
+
+# --
 
 # swy: usually mounted at /config
 CONFIGFS=`mount -t configfs | head -n1 | cut -d' ' -f 3`
@@ -44,14 +47,10 @@ echo "first rndis, then mass_storage to work on win32" > configs/swyconfig.1/str
 # --
 if [ $SWY_TETHER = true ]; then
   # swy: add a RNDIS Windows USB tethering function, here we seem to need the suffix
-  mkdir      functions/gsi.rmnet
-  mkdir      functions/gsi.dpl
-  mkdir      functions/gsi.rndis
-  echo "1" > functions/gsi.rndis/rndis_class_id
+  mkdir functions/ncm.0  #gsi.rndis
+  echo "6e:10:dc:5e:85:cc" > functions/ncm.0/host_addr # swy: https://github.com/RoEdAl/al-net-tools/blob/master/usb-gadget/usb-gadget.sh#L57
 
-  ln -s functions/gsi.rmnet configs/swyconfig.1
-  ln -s functions/gsi.dpl   configs/swyconfig.1
-  ln -s functions/gsi.rndis configs/swyconfig.1 # swy: add a symbolic link to put our function into a premade config folder
+  ln -s functions/ncm.0 configs/swyconfig.1 # swy: add a symbolic link to put our function into a premade config folder
 fi
 # --
 
@@ -81,30 +80,58 @@ getprop sys.usb.controller > UDC
 setprop sys.usb.state mass_storage
 
 # --
-if [ $SWY_TETHER = true ]; then
-  ip address add 10.20.30.1/24 dev rndis0
-  ip link set rndis0 up
+if [ $SWY_TETHER = true ]; then # swy: doesn't work, packets don't get through either side (packets show as rx errors in `cat /proc/net/dev`) when the interface is up due to some obscure reason. is it due to the overcomplicated `ip rule` cruft or something else?
+  ip address add 192.168.88.1/24 dev usb0
+  ip link set usb0 up
+  ip route add default via 192.168.2.1 dev wlan0
 
+  iptables -P INPUT ACCEPT
+  iptables -P FORWARD ACCEPT
+  iptables -P OUTPUT ACCEPT
+  iptables -t nat -F
+  iptables -t mangle -F
+  iptables -F
+  iptables -X
+  
+  echo 1 > /proc/sys/net/ipv4/ip_forward
+
+  #ip rule add priority 31900 lookup default
+  #ip rule add priority 32767 lookup default
+  
+  #11000:  from all iif lo oif rndis0 uidrange 0-0 lookup local_network
+  #17000:  from all iif lo oif rndis0 lookup local_network
+  #21000:  from all iif rndis0 lookup wlan0
+  
+  ip rule add priority 11000  from all iif lo oif usb0 uidrange 0-0 lookup local_network
+  ip rule add priority 17000  from all iif lo oif usb0 lookup local_network
+  ip rule add priority 21000  from all iif usb0 lookup wlan0
+  
+  #cat /proc/net/dev
+
+  
   # swy: https://github.com/luftreich/android-wired-tether/blob/725e79e9/native/tether/tetherStartStop.cpp#L154
   # swy: these don't seem to work well, networking is broken at both ends
   iptables -F
   iptables -F -t nat
   iptables -I FORWARD -m state --state ESTABLISHED,RELATED -j ACCEPT
-  iptables -I FORWARD -s 10.20.30.0/24 -j ACCEPT
+  iptables -I FORWARD -s 192.168.88.0/24 -j ACCEPT
   iptables -P FORWARD DROP
-  iptables -t nat -I POSTROUTING -s 10.20.30.0/24 -j MASQUERADE
+  iptables -t nat -I POSTROUTING -s 192.168.88.0/24 -j MASQUERADE
+  
+  iptables -I FORWARD -i wlan0 -o usb0 -m state --state RELATED,ESTABLISHED
+  iptables -I FORWARD -i usb0 -o wlan0 -m state --state INVALID -j DROP
 
   # swy: these get added by Android, found while diff'ing
-  iptables -A tetherctrl_FORWARD -j bw_global_alert
-  iptables -A tetherctrl_FORWARD -i wlan0 -o rndis0 -m state --state RELATED,ESTABLISHED -g tetherctrl_counters
-  iptables -A tetherctrl_FORWARD -i rndis0 -o wlan0 -m state --state INVALID -j DROP
-  iptables -A tetherctrl_FORWARD -i rndis0 -o wlan0 -g tetherctrl_counters
+  #iptables -A tetherctrl_FORWARD -j bw_global_alert
+  #iptables -A tetherctrl_FORWARD -i wlan0 -o rndis0 -m state --state RELATED,ESTABLISHED -g tetherctrl_counters
+  #iptables -A tetherctrl_FORWARD -i rndis0 -o wlan0 -m state --state INVALID -j DROP
+  #iptables -A tetherctrl_FORWARD -i rndis0 -o wlan0 -g tetherctrl_counters
 
   # swy: --port=0 disables the DNS functionality, we only want it to work as a DHCP server
   #      --enable-tftp --tftp-root="/sdcard/Download" (seemingly no tftp support in the bundled version ¿?)
   #      --conf-file=/data/tmp/dnsmasq.conf
   killall -9 dnsmasq
-  dnsmasq --no-daemon --no-hosts --no-resolv --server=8.8.8.8 --interface=rndis0 --dhcp-range=tether,10.20.30.2,10.20.30.20,1h
+  dnsmasq --no-daemon --no-hosts --no-resolv --server=8.8.8.8 --interface=usb0 --dhcp-range=tether,192.168.88.2,192.168.88.20,1h
 fi
 # --
 
@@ -123,7 +150,7 @@ if [ $SWY_TETHER = true ]; then
 
   killall -9 dnsmasq
   ip link set rndis0 down
-  ip address delete 10.20.30.1/32 dev rndis0
+  ip address delete 192.168.88.1/32 dev rndis0
 fi
 # --
 
@@ -134,20 +161,19 @@ svc usb resetUsbGadget
 svc usb resetUsbPort # swy: https://android.stackexchange.com/a/236070
 svc usb setFunctions ""
 
+# swy: reattach to the original gadget
+getprop sys.usb.controller > ../g1/UDC
+
 rm    configs/swyconfig.1/mass_storage.0 #swy: remove the symbolic link to each function, times two
 if [ $SWY_TETHER = true ]; then
-  rm  configs/swyconfig.1/gsi.rmnet
-  rm  configs/swyconfig.1/gsi.dpl
-  rm  configs/swyconfig.1/gsi.rndis
+  rm  configs/swyconfig.1/ncm.0 #gsi.rndis
 fi
 rmdir configs/swyconfig.1/strings/0x409  #swy: deallocate the configuration strings
 rmdir configs/swyconfig.1/               #swy: now we can remove the empty config
 
 rmdir functions/mass_storage.0           #swy: remove the now-unlinked function
 if [ $SWY_TETHER = true ]; then
-  rmdir functions/gsi.rmnet              
-  rmdir functions/gsi.dpl                
-  rmdir functions/gsi.rndis              #swy: remove the now-unlinked function
+  rmdir functions/ncm.0 #gsi.rndis
 fi
 
 rmdir strings/0x409                      #swy: deallocate the gadget strings
