@@ -15,9 +15,15 @@
 #  `cat /proc/config.gz | gunzip | grep RNDIS` `cat /proc/config.gz | gunzip | grep CONFIG_USB_F_` to view which gadget functions are built into your running kernel
 #  `mount | grep configfs` to get the mount point/path for the virtual config filesystem
 
-# swy: configure your file here, if it's not a plain ISO (i.e. a disk image) change the `cdrom` thing below from 'y' to 'n':
-SWY_MOUNT_FILE='/sdcard/Download/netboot.xyz.iso'
-SWY_TETHER=false
+# swy: configure your file here, if it's not a plain ISO (i.e. a disk image)
+#      change the `cdrom` thing below from 'y' to 'n':
+SWY_MOUNT_FILE='/sdcard/Download/netboot.xyz.img'
+SWY_MOUNT_CDROM='n'
+SWY_MOUNT_READ_ONLY='n'
+
+SWY_TETHER=false # swy: the actual networking on the phone-side doesn't work, yet. don't use this.
+
+printf "[-] creating a USB gadget with mass-storage\n    functionality for your image file:\n    %s (iso: %s)\n" "$SWY_MOUNT_FILE" "$SWY_MOUNT_CDROM"
 
 # --
 
@@ -59,9 +65,9 @@ mkdir functions/mass_storage.0 # swy: create a gadget function of type 'mass_sto
 # swy: the mass storage driver is aware of the underlying data, so only a well-formatted ISO will work in cdrom mode,
 #      and only a partitioned hard drive image will show up otherwise.
 #      if the drive appears blank/0 bytes there's your problem.
-echo "y"                                   > functions/mass_storage.0/lun.0/ro
+echo "$SWY_MOUNT_READ_ONLY"                > functions/mass_storage.0/lun.0/ro
 echo "y"                                   > functions/mass_storage.0/lun.0/removable
-echo "y"                                   > functions/mass_storage.0/lun.0/cdrom
+echo "$SWY_MOUNT_CDROM"                    > functions/mass_storage.0/lun.0/cdrom
 #case "$SWY_MOUNT_FILE" in
 #*.iso) echo echo "y"                       > functions/mass_storage.0/lun.0/cdrom
 #*    ) echo echo "n"                       > functions/mass_storage.0/lun.0/cdrom
@@ -135,7 +141,7 @@ if [ $SWY_TETHER = true ]; then # swy: doesn't work, packets don't get through e
 fi
 # --
 
-echo "[i] press any key to exit the mass storage gadget mode..." && read
+echo '[i] mounted; press any key to exit the gadget mode...' && read
 echo 
 
 # --
